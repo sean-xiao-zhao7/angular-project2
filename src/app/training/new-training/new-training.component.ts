@@ -5,6 +5,7 @@ import {
   Output,
   Injectable,
 } from '@angular/core';
+import { NgForm } from '@angular/forms';
 import { Exercise } from '../models/exercise.model';
 import { TrainingService } from '../services/training.service';
 
@@ -25,8 +26,7 @@ export class NewTrainingComponent implements OnInit {
     this.exercises = this.service.getExercises();
   }
 
-  onStartTraining() {
+  onStartTraining(form: NgForm) {
     this.service.startExercise(this.selectedExercise.id);
-    this.trainingStart.emit();
   }
 }
