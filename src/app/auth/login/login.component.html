@@ -4,7 +4,7 @@
     fxLayoutAlign="center center"
     fxLayoutGap="10px"
     #f="ngForm"
-    (ngSubmit)="onSubmit()"
+    (ngSubmit)="onSubmit(f)"
   >
      
     <mat-form-field>
@@ -43,8 +43,10 @@
       color="primary"
       type="submit"
       [disabled]="f.invalid"
+      *ngIf="!isLoading"
     >
       Submit
     </button>
+    <mat-spinner *ngIf="isLoading"></mat-spinner>
   </form>
 </section>

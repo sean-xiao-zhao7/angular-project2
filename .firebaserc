@@ -1,0 +1,11 @@
+{
+  "targets": {
+    "angular1-747a1": {
+      "hosting": {
+        "project2": [
+          "angular1-747a1"
+        ]
+      }
+    }
+  }
+}

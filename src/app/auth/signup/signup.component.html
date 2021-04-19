@@ -51,7 +51,7 @@
       <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
       <mat-datepicker #picker></mat-datepicker>
     </mat-form-field>
-    <mat-checkbox ngModel labelPosition="before" color="primary" name='terms'
+    <mat-checkbox ngModel labelPosition="before" color="primary" name="terms"
       >I agree to the terms.</mat-checkbox
     >
     <button
@@ -59,8 +59,10 @@
       color="primary"
       type="submit"
       [disabled]="f.invalid"
+      *ngIf="!isLoading"
     >
       Submit
     </button>
+    <mat-spinner *ngIf="isLoading"></mat-spinner>
   </form>
 </section>
