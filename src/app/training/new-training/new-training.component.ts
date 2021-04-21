@@ -1,9 +1,12 @@
-import { Component, OnInit, Injectable, OnDestroy } from '@angular/core';
+import { Component, OnInit, Injectable } from '@angular/core';
 import { NgForm } from '@angular/forms';
+import { Observable } from 'rxjs';
+import { Store } from '@ngrx/store';
+
 import { Exercise } from '../models/exercise.model';
 import { TrainingService } from '../services/training.service';
-import { Subscription } from 'rxjs';
-import { UIService } from 'src/app/shared/ui.service';
+import * as fromRoot from '../../app.reducer';
+import * as fromTraining from '../../reducers/training.reducer';
 
 @Component({
   selector: 'app-new-training',
@@ -11,25 +14,20 @@ import { UIService } from 'src/app/shared/ui.service';
   styleUrls: ['./new-training.component.css'],
 })
 @Injectable()
-export class NewTrainingComponent implements OnInit, OnDestroy {
-  exercises: Exercise[];
+export class NewTrainingComponent implements OnInit {
+  exercises$: Observable<Exercise[]>;
   selectedExercise: Exercise;
-  getExercisesSubscription: Subscription;
-  isLoading: boolean = false;
-  private uiSubscription: Subscription;
+  isLoading$: Observable<boolean>;
 
-  constructor(private service: TrainingService, private uiService: UIService) {}
+  constructor(
+    private service: TrainingService,
+    private store: Store<fromTraining.State>
+  ) {}
 
   ngOnInit(): void {
-    this.getExercisesSubscription = this.service.getExercisesEmitter.subscribe(
-      (exercises) => (this.exercises = exercises)
-    );
-    this.uiSubscription = this.uiService.loadingStateChange.subscribe(
-      (isLoading) => {
-        this.isLoading = isLoading;
-      }
-    );
-    this.getExercises();
+    this.service.getExercises();
+    this.isLoading$ = this.store.select(fromRoot.getIsLoading);
+    this.exercises$ = this.store.select(fromTraining.getExercises);
   }
 
   getExercises() {
@@ -38,9 +36,5 @@ export class NewTrainingComponent implements OnInit, OnDestroy {
 
   onStartTraining(form: NgForm) {
     this.service.startExercise(form.value.exerciseOption);
-  }
-
-  ngOnDestroy() {
-    this.getExercisesSubscription.unsubscribe();
   }
 }

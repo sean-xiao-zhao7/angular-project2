@@ -1,24 +1,28 @@
 import { Injectable } from '@angular/core';
-import { Subject, Subscription } from 'rxjs';
-import { Exercise } from '../models/exercise.model';
+import { Subscription } from 'rxjs';
 import { AngularFirestore } from '@angular/fire/firestore';
-import { map } from 'rxjs/operators';
+import { map, take } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
+
+import { Exercise } from '../models/exercise.model';
 import { UIService } from 'src/app/shared/ui.service';
+
+import * as fromTraining from '../../reducers/training.reducer';
+import * as UI from '../../reducers/ui.actions';
+import * as trainingActions from '../../reducers/training.actions';
 
 @Injectable()
 export class TrainingService {
-  exerciseUpdated = new Subject<Exercise>();
-  getExercisesEmitter = new Subject<Exercise[]>();
-  myExercisesEmitter = new Subject<Exercise[]>();
-
-  private availableExercises: Exercise[] = [];
-  private currentExercise: Exercise;
   private subscriptions: Subscription[] = [];
 
-  constructor(private db: AngularFirestore, private uiService: UIService) {}
+  constructor(
+    private db: AngularFirestore,
+    private uiService: UIService,
+    private store: Store<fromTraining.State>
+  ) {}
 
   getExercises() {
-    this.uiService.loadingStateChange.next(true);
+    this.store.dispatch(new UI.StartLoading());
     this.subscriptions.push(
       this.db
         .collection<Exercise>('angular1')
@@ -30,57 +34,60 @@ export class TrainingService {
               const id = item.payload.doc.id;
               return { id, ...data };
             });
-            // throw new Error();
           })
         )
         .subscribe(
           (exercises: Exercise[]) => {
-            this.availableExercises = exercises;
-            this.uiService.loadingStateChange.next(false);
-            this.getExercisesEmitter.next(this.availableExercises.slice());
+            this.store.dispatch(new UI.StopLoading());
+            this.store.dispatch(
+              new trainingActions.setExercisesAction(exercises)
+            );
           },
           (error) => {
             this.uiService.showSnackbar(error.message, null, 3000);
-            this.uiService.loadingStateChange.next(false);
-            this.getExercisesEmitter.next(null);
+            this.store.dispatch(new UI.StopLoading());
+            this.store.dispatch(new trainingActions.setExercisesAction([]));
           }
         )
     );
   }
 
   startExercise(exerciseId: string) {
-    this.currentExercise = this.availableExercises.find(
-      (e) => e.id === exerciseId
+    this.store.dispatch(
+      new trainingActions.setCurrentExerciseAction(exerciseId)
     );
-    this.exerciseUpdated.next({ ...this.currentExercise });
   }
 
   finishExercise() {
-    let newExercise = {
-      ...this.currentExercise,
-      date: new Date(),
-      state: 'completed',
-    } as Exercise;
-    this.saveFirebase(newExercise);
-    this.currentExercise = null;
-    this.exerciseUpdated.next(null);
+    this.store
+      .select(fromTraining.getCurrentExercise)
+      .pipe(take(1))
+      .subscribe((exercise) => {
+        let newExercise = {
+          ...exercise,
+          date: new Date(),
+          state: 'completed',
+        } as Exercise;
+        this.saveFirebase(newExercise);
+        this.store.dispatch(new trainingActions.stopCurrentExerciseAction());
+      });
   }
 
   cancelExercise(progress: number) {
-    let newExercise = {
-      ...this.currentExercise,
-      duration: this.currentExercise.duration * (progress / 100),
-      calories: this.currentExercise.calories * (progress / 100),
-      date: new Date(),
-      state: 'canceled',
-    } as Exercise;
-    this.saveFirebase(newExercise);
-    this.currentExercise = null;
-    this.exerciseUpdated.next(null);
-  }
-
-  getCurrentExercise() {
-    return { ...this.currentExercise };
+    this.store
+      .select(fromTraining.getCurrentExercise)
+      .pipe(take(1))
+      .subscribe((exercise) => {
+        let newExercise = {
+          ...exercise,
+          duration: exercise.duration * (progress / 100),
+          calories: exercise.calories * (progress / 100),
+          date: new Date(),
+          state: 'canceled',
+        } as Exercise;
+        this.saveFirebase(newExercise);
+        this.store.dispatch(new trainingActions.stopCurrentExerciseAction());
+      });
   }
 
   getMyExercises() {
@@ -89,7 +96,9 @@ export class TrainingService {
         .collection('myExercises')
         .valueChanges()
         .subscribe((exercises: Exercise[]) => {
-          this.myExercisesEmitter.next(exercises);
+          this.store.dispatch(
+            new trainingActions.setMyExercisesAction(exercises)
+          );
         })
     );
   }

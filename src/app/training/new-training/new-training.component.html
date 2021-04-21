@@ -1,10 +1,17 @@
 <section class="new-training" fxLayout fxLayoutAlign="center">
-  <mat-spinner *ngIf="isLoading"></mat-spinner>
-  <button mat-raised-button color='primary' (click)="getExercises()" *ngIf="!exercises">Reload</button>
+  <mat-spinner *ngIf="isLoading$ | async"></mat-spinner>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="getExercises()"
+    *ngIf="!(exercises$ | async)"
+  >
+    Reload
+  </button>
   <form
     (ngSubmit)="onStartTraining(f)"
     #f="ngForm"
-    *ngIf="!isLoading && exercises"
+    *ngIf="!(isLoading$ | async) && (exercises$ | async)"
   >
     <mat-card fxFlex="400px" fxFlex.xs="100%">
       <mat-card-title fxLayoutAlign="center"> New workout </mat-card-title>
@@ -18,7 +25,7 @@
             required
           >
             <mat-option
-              *ngFor="let exercise of exercises"
+              *ngFor="let exercise of (exercises$ | async)"
               [value]="exercise.id"
             >
               {{ exercise.name }}
